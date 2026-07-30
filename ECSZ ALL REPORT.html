@@ -1,0 +1,3193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ECSZ · Secure Access</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js">
+    </script>
+
+    <style>
+        /* ========== RESET & BASE ========== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            overflow-x: hidden;
+            min-height: 100vh;
+            background: #0a0a12;
+            color: #ffffff;
+            transition: background 0.5s ease, color 0.4s ease;
+        }
+
+        body.light-mode {
+            background: #f2f4f8;
+            color: #111;
+        }
+
+        /* ========== BG ========== */
+        .bg-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(72, 0, 255, 0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 242, 255, 0.10) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 80%, rgba(255, 0, 200, 0.08) 0%, transparent 50%),
+                #0a0a12;
+            animation: auroraPulse 18s ease-in-out infinite alternate;
+            transition: background 0.6s ease;
+        }
+
+        @keyframes auroraPulse {
+            0% {
+                opacity: 0.6;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+        }
+
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            z-index: -1;
+            animation: orbFloat 20s infinite alternate ease-in-out;
+            transition: opacity 0.6s ease;
+        }
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: #6a00ff;
+            top: -100px;
+            left: -100px;
+        }
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: #00c3ff;
+            bottom: -150px;
+            right: -150px;
+            animation-duration: 25s;
+        }
+        .orb-3 {
+            width: 300px;
+            height: 300px;
+            background: #ff00a0;
+            top: 40%;
+            left: 60%;
+            animation-duration: 15s;
+            animation-delay: -5s;
+        }
+
+        @keyframes orbFloat {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                transform: translate(60px, 40px) scale(1.2);
+            }
+        }
+
+        /* ========== LIGHT MODE OVERRIDES ========== */
+        body.light-mode .bg-canvas {
+            background:
+                radial-gradient(ellipse at 20% 50%, rgba(72, 0, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(0, 200, 255, 0.06) 0%, transparent 50%),
+                #f2f4f8;
+        }
+        body.light-mode .orb {
+            opacity: 0.1;
+        }
+        body.light-mode .auth-card {
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            color: #111;
+        }
+        body.light-mode .auth-card h2 {
+            color: #111;
+        }
+        body.light-mode .auth-card .sub {
+            color: #555;
+        }
+        body.light-mode .auth-card input {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            color: #111;
+        }
+        body.light-mode .auth-card input:focus {
+            border-color: #00a3ff;
+            box-shadow: 0 0 0 3px rgba(0, 163, 255, 0.15);
+        }
+        body.light-mode .auth-card .btn-primary {
+            background: #0a0a12;
+            color: #fff;
+        }
+        body.light-mode .auth-card .btn-primary:hover {
+            background: #1a1a2e;
+        }
+        body.light-mode .auth-card .link {
+            color: #0066cc;
+        }
+        body.light-mode .auth-card .link:hover {
+            color: #004499;
+        }
+        body.light-mode .auth-card .error-msg {
+            background: rgba(220, 38, 38, 0.12);
+            color: #b91c1c;
+        }
+        body.light-mode .auth-card .success-msg {
+            background: rgba(22, 163, 74, 0.12);
+            color: #15803d;
+        }
+
+        /* ========== AUTH PAGES ========== */
+        .auth-page {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease;
+        }
+
+        .auth-page.hidden {
+            display: none !important;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(16, 16, 28, 0.85);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 32px;
+            padding: 40px 36px 36px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            transition: background 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            border-radius: 32px;
+        }
+
+        .auth-card .badge {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #00f2ff, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .auth-card h2 {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #f0f0ff;
+            margin-bottom: 6px;
+        }
+
+        .auth-card .sub {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 28px;
+            font-weight: 400;
+        }
+
+        .auth-card .form-group {
+            margin-bottom: 18px;
+        }
+
+        .auth-card label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 6px;
+            letter-spacing: 0.3px;
+        }
+
+        .auth-card input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f0f0ff;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .auth-card input:focus {
+            border-color: #00f2ff;
+            box-shadow: 0 0 0 4px rgba(0, 242, 255, 0.08);
+        }
+
+        .auth-card input::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+        }
+
+        .auth-card .btn-primary {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #00f2ff, #a855f7);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 6px;
+            letter-spacing: 0.3px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-card .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 242, 255, 0.25);
+        }
+
+        .auth-card .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        .auth-card .btn-primary::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+            pointer-events: none;
+            border-radius: 14px;
+        }
+
+        .auth-card .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .auth-card .btn-primary:disabled:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .auth-card .link {
+            display: inline-block;
+            margin-top: 18px;
+            font-size: 14px;
+            color: #00f2ff;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.3s;
+            font-weight: 500;
+        }
+
+        .auth-card .link:hover {
+            color: #a855f7;
+        }
+
+        .auth-card .divider {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 22px 0 18px;
+        }
+
+        .auth-card .divider::before,
+        .auth-card .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .auth-card .divider span {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.25);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .auth-card .error-msg,
+        .auth-card .success-msg {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .auth-card .error-msg.show,
+        .auth-card .success-msg.show {
+            display: block;
+        }
+
+        .auth-card .error-msg {
+            background: rgba(220, 38, 38, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(220, 38, 38, 0.15);
+        }
+
+        .auth-card .success-msg {
+            background: rgba(22, 163, 74, 0.15);
+            color: #6ee7b7;
+            border: 1px solid rgba(22, 163, 74, 0.15);
+        }
+
+        .auth-card .admin-badge {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        /* ========== MAIN PAGE ========== */
+        #mainPage {
+            display: none;
+            padding-bottom: 100px;
+        }
+
+        #mainPage.active {
+            display: block;
+        }
+
+        .header-wrap {
+            position: relative;
+            z-index: 10;
+            padding: 28px 20px 16px;
+            text-align: center;
+            background: rgba(10, 10, 18, 0.55);
+            backdrop-filter: blur(16px) saturate(180%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: background 0.4s ease, border-color 0.4s ease;
+        }
+
+        body.light-mode .header-wrap {
+            background: rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .header-wrap h1 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #b7b7ff, #00f2ff, #ff6fd8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 40px rgba(0, 242, 255, 0.2);
+            display: inline-block;
+            padding: 0 20px;
+        }
+
+        .header-wrap .sub {
+            font-size: 14px;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 6px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            transition: color 0.4s ease;
+        }
+
+        body.light-mode .header-wrap .sub {
+            color: rgba(0, 0, 0, 0.5);
+        }
+
+        .header-wrap .glow-line {
+            width: 120px;
+            height: 2px;
+            margin: 12px auto 0;
+            background: linear-gradient(90deg, transparent, #00f2ff, #ff00ff, transparent);
+            border-radius: 2px;
+            opacity: 0.7;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+
+        .header-actions .btn-sm {
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+            color: #f0f0ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+            text-decoration: none;
+        }
+
+        .header-actions .btn-sm:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        body.light-mode .header-actions .btn-sm {
+            color: #111;
+            border-color: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.04);
+        }
+        body.light-mode .header-actions .btn-sm:hover {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        /* ========== GRID ========== */
+        .container {
+            position: relative;
+            z-index: 5;
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 18px;
+            padding: 28px 20px 40px;
+        }
+
+        .btn {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px 12px;
+            border-radius: 18px;
+            text-decoration: none;
+            color: #f0f0ff;
+            font-weight: 600;
+            font-size: 14px;
+            text-align: center;
+            line-height: 1.4;
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            overflow: hidden;
+            min-height: 80px;
+            word-break: break-word;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            will-change: transform, box-shadow;
+        }
+
+        body.light-mode .btn {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            color: #111;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+        }
+        body.light-mode .btn:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: #00a3ff;
+            box-shadow: 0 8px 30px rgba(0, 162, 255, 0.2);
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
+            pointer-events: none;
+            border-radius: 18px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #00f2ff, #a855f7, #ff00c8);
+            background-size: 200% 100%;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.6s ease;
+        }
+
+        .btn:hover::before {
+            transform: scaleX(1);
+            animation: shimmerLine 1.2s infinite linear;
+        }
+
+        @keyframes shimmerLine {
+            0% {
+                background-position: 0% 0%;
+            }
+            100% {
+                background-position: 200% 0%;
+            }
+        }
+
+        .btn .icon {
+            font-size: 18px;
+            margin-right: 8px;
+            filter: drop-shadow(0 0 6px rgba(0, 242, 255, 0.3));
+        }
+
+        .btn-clicked {
+            animation: btnPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes btnPop {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(0, 242, 255, 0);
+            }
+            30% {
+                transform: scale(0.94);
+                box-shadow: 0 0 40px 10px rgba(0, 242, 255, 0.3);
+            }
+            60% {
+                transform: scale(1.04);
+                box-shadow: 0 0 60px 20px rgba(0, 242, 255, 0.15);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.7) 0%, rgba(0, 242, 255, 0.3) 100%);
+            transform: scale(0);
+            animation: rippleAnim 0.7s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes rippleAnim {
+            to {
+                transform: scale(6);
+                opacity: 0;
+            }
+        }
+
+        /* ================================================================
+           ADMIN PANEL
+           ================================================================ */
+        #adminPanel {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(14px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        #adminPanel.active {
+            display: flex;
+        }
+
+        .admin-card {
+            width: 100%;
+            max-width: 820px;
+            max-height: 92vh;
+            background: rgba(18, 18, 32, 0.88);
+            backdrop-filter: blur(28px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 40px;
+            padding: 34px 38px 38px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            overflow-y: auto;
+            transition: background 0.4s ease, border-color 0.4s ease;
+            position: relative;
+        }
+
+        body.light-mode .admin-card {
+            background: rgba(245, 247, 250, 0.92);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            color: #111;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.08);
+        }
+
+        .admin-card .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        body.light-mode .admin-card .admin-header {
+            border-bottom-color: rgba(0, 0, 0, 0.06);
+        }
+
+        .admin-card .admin-header .title-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .admin-card .admin-header .title-group .shield {
+            font-size: 28px;
+            filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.3));
+        }
+
+        .admin-card .admin-header h2 {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #c084fc, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.3px;
+        }
+
+        body.light-mode .admin-card .admin-header h2 {
+            background: linear-gradient(135deg, #7c3aed, #2563eb, #059669);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .admin-card .admin-header .close-admin {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 22px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .admin-card .admin-header .close-admin:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            transform: rotate(90deg);
+        }
+
+        body.light-mode .admin-card .admin-header .close-admin {
+            background: rgba(0, 0, 0, 0.04);
+            border-color: rgba(0, 0, 0, 0.06);
+            color: rgba(0, 0, 0, 0.4);
+        }
+        body.light-mode .admin-card .admin-header .close-admin:hover {
+            background: rgba(0, 0, 0, 0.08);
+            color: #000;
+        }
+
+        .admin-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 20px;
+            padding: 18px 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        body.light-mode .stat-card {
+            background: rgba(0, 0, 0, 0.02);
+            border-color: rgba(0, 0, 0, 0.04);
+        }
+        body.light-mode .stat-card:hover {
+            background: rgba(0, 0, 0, 0.04);
+            border-color: rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.2;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-card .stat-label {
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.35);
+            margin-top: 4px;
+        }
+
+        body.light-mode .stat-card .stat-label {
+            color: rgba(0, 0, 0, 0.35);
+        }
+
+        .stat-card .stat-number.green {
+            background: linear-gradient(135deg, #34d399, #6ee7b7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-card .stat-number.amber {
+            background: linear-gradient(135deg, #fbbf24, #fcd34d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .admin-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 20px;
+            padding: 14px 22px;
+            margin-bottom: 24px;
+        }
+
+        body.light-mode .admin-controls {
+            background: rgba(0, 0, 0, 0.02);
+            border-color: rgba(0, 0, 0, 0.04);
+        }
+
+        .admin-controls .control-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .admin-controls .control-label .icon {
+            font-size: 20px;
+        }
+
+        .toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .toggle-wrap .status-text {
+            font-size: 13px;
+            font-weight: 600;
+            padding: 4px 16px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s ease;
+        }
+
+        .toggle-wrap .status-text.on {
+            background: rgba(52, 211, 153, 0.12);
+            color: #6ee7b7;
+            border-color: rgba(52, 211, 153, 0.2);
+        }
+
+        .toggle-wrap .status-text.off {
+            background: rgba(251, 191, 36, 0.08);
+            color: #fcd34d;
+            border-color: rgba(251, 191, 36, 0.15);
+        }
+
+        body.light-mode .toggle-wrap .status-text {
+            background: rgba(0, 0, 0, 0.04);
+            border-color: rgba(0, 0, 0, 0.06);
+        }
+        body.light-mode .toggle-wrap .status-text.on {
+            background: rgba(22, 163, 74, 0.1);
+            color: #15803d;
+            border-color: rgba(22, 163, 74, 0.15);
+        }
+        body.light-mode .toggle-wrap .status-text.off {
+            background: rgba(202, 138, 4, 0.08);
+            color: #a16207;
+            border-color: rgba(202, 138, 4, 0.12);
+        }
+
+        .toggle-input {
+            display: none;
+        }
+
+        .toggle-track {
+            width: 48px;
+            height: 26px;
+            border-radius: 50px;
+            background: #3a3a4a;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .toggle-track .toggle-knob {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.3s ease, background 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-input:checked+.toggle-track {
+            background: #34d399;
+        }
+
+        .toggle-input:checked+.toggle-track .toggle-knob {
+            transform: translateX(22px);
+            background: #fff;
+        }
+
+        body.light-mode .toggle-track {
+            background: #d1d5db;
+        }
+        body.light-mode .toggle-input:checked+.toggle-track {
+            background: #059669;
+        }
+
+        .user-table-wrap {
+            margin-top: 4px;
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        body.light-mode .user-table-wrap {
+            border-color: rgba(0, 0, 0, 0.04);
+            background: rgba(0, 0, 0, 0.01);
+        }
+
+        .user-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .user-table th {
+            text-align: left;
+            padding: 16px 16px 12px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        body.light-mode .user-table th {
+            color: rgba(0, 0, 0, 0.3);
+            border-bottom-color: rgba(0, 0, 0, 0.04);
+        }
+
+        .user-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            vertical-align: middle;
+        }
+
+        body.light-mode .user-table td {
+            border-bottom-color: rgba(0, 0, 0, 0.02);
+        }
+
+        .user-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .user-table .username-cell {
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-table .username-cell .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a855f7, #00f2ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .user-table .date-cell {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        body.light-mode .user-table .date-cell {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 16px 5px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-badge.approved {
+            background: rgba(52, 211, 153, 0.12);
+            color: #6ee7b7;
+        }
+        .status-badge.approved .dot {
+            background: #34d399;
+        }
+
+        .status-badge.pending {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fcd34d;
+        }
+        .status-badge.pending .dot {
+            background: #fbbf24;
+        }
+
+        body.light-mode .status-badge.approved {
+            background: rgba(22, 163, 74, 0.08);
+            color: #15803d;
+        }
+        body.light-mode .status-badge.pending {
+            background: rgba(202, 138, 4, 0.08);
+            color: #a16207;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .action-btn.approve-btn {
+            background: rgba(52, 211, 153, 0.12);
+            color: #6ee7b7;
+        }
+        .action-btn.approve-btn:hover {
+            background: rgba(52, 211, 153, 0.25);
+            transform: scale(1.04);
+        }
+
+        .action-btn.reject-btn {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fcd34d;
+        }
+        .action-btn.reject-btn:hover {
+            background: rgba(251, 191, 36, 0.25);
+            transform: scale(1.04);
+        }
+
+        .action-btn.delete-btn {
+            background: rgba(248, 113, 113, 0.08);
+            color: #f87171;
+        }
+        .action-btn.delete-btn:hover {
+            background: rgba(248, 113, 113, 0.2);
+            transform: scale(1.04);
+        }
+
+        body.light-mode .action-btn.approve-btn {
+            background: rgba(22, 163, 74, 0.08);
+            color: #15803d;
+        }
+        body.light-mode .action-btn.approve-btn:hover {
+            background: rgba(22, 163, 74, 0.16);
+        }
+        body.light-mode .action-btn.reject-btn {
+            background: rgba(202, 138, 4, 0.08);
+            color: #a16207;
+        }
+        body.light-mode .action-btn.reject-btn:hover {
+            background: rgba(202, 138, 4, 0.16);
+        }
+        body.light-mode .action-btn.delete-btn {
+            background: rgba(185, 28, 28, 0.06);
+            color: #b91c1c;
+        }
+        body.light-mode .action-btn.delete-btn:hover {
+            background: rgba(185, 28, 28, 0.12);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 15px;
+        }
+
+        body.light-mode .empty-state {
+            color: rgba(0, 0, 0, 0.2);
+        }
+
+        .admin-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        body.light-mode .admin-footer {
+            border-top-color: rgba(0, 0, 0, 0.04);
+        }
+
+        .admin-footer .admin-cred {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.15);
+            letter-spacing: 0.5px;
+        }
+
+        body.light-mode .admin-footer .admin-cred {
+            color: rgba(0, 0, 0, 0.15);
+        }
+
+        .admin-footer .admin-cred strong {
+            color: rgba(255, 255, 255, 0.3);
+        }
+        body.light-mode .admin-footer .admin-cred strong {
+            color: rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-sm.admin-logout-btn {
+            padding: 8px 22px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid rgba(248, 113, 113, 0.15);
+            background: rgba(248, 113, 113, 0.06);
+            color: #f87171;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-sm.admin-logout-btn:hover {
+            background: rgba(248, 113, 113, 0.12);
+            border-color: rgba(248, 113, 113, 0.3);
+            transform: translateY(-2px);
+        }
+
+        body.light-mode .btn-sm.admin-logout-btn {
+            border-color: rgba(185, 28, 28, 0.12);
+            background: rgba(185, 28, 28, 0.04);
+            color: #b91c1c;
+        }
+        body.light-mode .btn-sm.admin-logout-btn:hover {
+            background: rgba(185, 28, 28, 0.08);
+        }
+
+        /* ================================================================
+           SETTINGS PANEL — WITH LOGO
+           ================================================================ */
+        .settings-float-btn {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 50;
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #fff;
+            font-size: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .settings-float-btn:hover {
+            transform: scale(1.1) rotate(60deg);
+            box-shadow: 0 0 40px rgba(0, 242, 255, 0.2);
+            border-color: rgba(0, 242, 255, 0.4);
+        }
+
+        body.light-mode .settings-float-btn {
+            background: rgba(255, 255, 255, 0.7);
+            border-color: rgba(0, 0, 0, 0.08);
+            color: #111;
+        }
+
+        body.light-mode .settings-float-btn:hover {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: #00a3ff;
+        }
+
+        .settings-panel {
+            position: fixed;
+            bottom: 100px;
+            right: 28px;
+            z-index: 60;
+            background: rgba(16, 16, 28, 0.92);
+            backdrop-filter: blur(28px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 32px;
+            padding: 28px 30px 30px;
+            min-width: 320px;
+            max-width: 400px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+            transform: scale(0.85) translateY(24px);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            color: #f0f0ff;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .settings-panel.open {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        body.light-mode .settings-panel {
+            background: rgba(245, 247, 250, 0.94);
+            border-color: rgba(0, 0, 0, 0.06);
+            color: #111;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.08);
+        }
+
+        .settings-panel .panel-logo {
+            text-align: center;
+            padding: 6px 0 16px 0;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        body.light-mode .settings-panel .panel-logo {
+            border-bottom-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .settings-panel .panel-logo .logo-main {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #fcd34d, #f59e0b, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(245, 158, 11, 0.2);
+        }
+
+        .settings-panel .panel-logo .logo-sub {
+            font-size: 12px;
+            letter-spacing: 3px;
+            color: rgba(255, 255, 255, 0.35);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        body.light-mode .settings-panel .panel-logo .logo-sub {
+            color: rgba(0, 0, 0, 0.35);
+        }
+
+        .settings-panel .panel-logo .logo-tag {
+            margin-top: 6px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #fcd34d;
+            letter-spacing: 0.5px;
+            background: rgba(252, 211, 77, 0.08);
+            display: inline-block;
+            padding: 4px 18px;
+            border-radius: 30px;
+            border: 1px solid rgba(252, 211, 77, 0.12);
+        }
+
+        body.light-mode .settings-panel .panel-logo .logo-tag {
+            color: #b45309;
+            background: rgba(180, 83, 9, 0.06);
+            border-color: rgba(180, 83, 9, 0.10);
+        }
+
+        .settings-panel .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        body.light-mode .settings-panel .panel-header {
+            border-bottom-color: rgba(0, 0, 0, 0.04);
+        }
+
+        .settings-panel .panel-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .settings-panel .panel-header .close-settings {
+            background: rgba(255, 255, 255, 0.04);
+            border: none;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-panel .panel-header .close-settings:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            transform: rotate(90deg);
+        }
+
+        body.light-mode .settings-panel .panel-header .close-settings {
+            color: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.02);
+        }
+        body.light-mode .settings-panel .panel-header .close-settings:hover {
+            background: rgba(0, 0, 0, 0.06);
+            color: #000;
+        }
+
+        .settings-panel .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        body.light-mode .settings-panel .toggle-row {
+            border-bottom-color: rgba(0, 0, 0, 0.03);
+        }
+
+        .settings-panel .toggle-row .label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .settings-panel .toggle-row .label .icon {
+            font-size: 20px;
+        }
+
+        .settings-toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-toggle-wrap .toggle-track-sm {
+            width: 44px;
+            height: 24px;
+            border-radius: 50px;
+            background: #3a3a4a;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .settings-toggle-wrap .toggle-track-sm .toggle-knob-sm {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.3s ease, background 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .settings-toggle-wrap .toggle-input-sm:checked+.toggle-track-sm {
+            background: #34d399;
+        }
+
+        .settings-toggle-wrap .toggle-input-sm:checked+.toggle-track-sm .toggle-knob-sm {
+            transform: translateX(20px);
+            background: #fff;
+        }
+
+        body.light-mode .settings-toggle-wrap .toggle-track-sm {
+            background: #d1d5db;
+        }
+        body.light-mode .settings-toggle-wrap .toggle-input-sm:checked+.toggle-track-sm {
+            background: #059669;
+        }
+
+        .settings-toggle-wrap .toggle-input-sm {
+            display: none;
+        }
+
+        .settings-panel .social-section {
+            margin: 16px 0 14px;
+        }
+
+        .settings-panel .social-section .section-label {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255, 255, 255, 0.25);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        body.light-mode .settings-panel .social-section .section-label {
+            color: rgba(0, 0, 0, 0.25);
+        }
+
+        .settings-panel .social-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .settings-panel .social-link-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            color: #f0f0ff;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .settings-panel .social-link-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .settings-panel .social-link-card .s-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            width: 32px;
+            text-align: center;
+        }
+
+        .settings-panel .social-link-card .s-name {
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        body.light-mode .settings-panel .social-link-card {
+            background: rgba(0, 0, 0, 0.02);
+            border-color: rgba(0, 0, 0, 0.04);
+            color: #111;
+        }
+
+        body.light-mode .settings-panel .social-link-card:hover {
+            background: rgba(0, 0, 0, 0.06);
+            border-color: rgba(0, 0, 0, 0.08);
+        }
+
+        .settings-panel .notice-box {
+            margin-top: 16px;
+            padding: 16px 18px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 13px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        body.light-mode .settings-panel .notice-box {
+            background: rgba(0, 0, 0, 0.01);
+            border-color: rgba(0, 0, 0, 0.04);
+            color: rgba(0, 0, 0, 0.55);
+        }
+
+        .settings-panel .notice-box .notice-title {
+            font-weight: 700;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 4px;
+            color: #f0f0ff;
+        }
+
+        body.light-mode .settings-panel .notice-box .notice-title {
+            color: #111;
+        }
+
+        .settings-panel .notice-box strong {
+            color: #f0f0ff;
+        }
+
+        body.light-mode .settings-panel .notice-box strong {
+            color: #111;
+        }
+
+        /* ========== SCROLL ========== */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #a855f7, #00f2ff);
+            border-radius: 12px;
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 640px) {
+            .admin-card {
+                padding: 24px 18px 26px;
+                border-radius: 28px;
+                max-height: 95vh;
+            }
+            .admin-card .admin-header h2 {
+                font-size: 20px;
+            }
+            .admin-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            .stat-card .stat-number {
+                font-size: 26px;
+            }
+            .admin-controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .admin-controls .control-label {
+                justify-content: center;
+            }
+            .toggle-wrap {
+                justify-content: center;
+            }
+            .user-table th,
+            .user-table td {
+                padding: 10px 10px;
+                font-size: 12px;
+            }
+            .user-table .username-cell .avatar {
+                width: 26px;
+                height: 26px;
+                font-size: 11px;
+            }
+            .action-group {
+                flex-direction: column;
+                gap: 4px;
+            }
+            .action-btn {
+                padding: 4px 12px;
+                font-size: 11px;
+                justify-content: center;
+            }
+            .admin-footer {
+                flex-direction: column;
+                text-align: center;
+            }
+            .container {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                padding: 16px 12px 40px;
+            }
+            .btn {
+                font-size: 12px;
+                padding: 14px 8px;
+                min-height: 70px;
+            }
+            .header-wrap h1 {
+                font-size: 22px;
+            }
+            .auth-card {
+                padding: 30px 22px 28px;
+                border-radius: 24px;
+            }
+            .settings-panel {
+                right: 16px;
+                bottom: 90px;
+                min-width: 280px;
+                padding: 22px 20px 24px;
+                border-radius: 26px;
+            }
+            .settings-float-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 22px;
+                bottom: 20px;
+                right: 20px;
+            }
+            .settings-panel .social-grid {
+                grid-template-columns: 1fr;
+            }
+            .settings-panel .panel-logo .logo-main {
+                font-size: 22px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .admin-stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .auth-card h2 {
+                font-size: 22px;
+            }
+            .settings-panel {
+                min-width: 240px;
+                right: 12px;
+                bottom: 80px;
+                padding: 18px 16px 20px;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+        .mt-8 {
+            margin-top: 8px;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .flex-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .gap-8 {
+            gap: 8px;
+        }
+        .gap-12 {
+            gap: 12px;
+        }
+
+        /* loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .btn-primary:disabled:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* ========== SESSION PERSISTENCE FIX ========== */
+        .session-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 10, 18, 0.7);
+            backdrop-filter: blur(8px);
+            transition: opacity 0.4s ease;
+        }
+        .session-loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .session-loader .loader-box {
+            background: rgba(16, 16, 28, 0.85);
+            backdrop-filter: blur(24px);
+            border-radius: 28px;
+            padding: 40px 48px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+        }
+        .session-loader .loader-box .spinner-lg {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.08);
+            border-top-color: #00f2ff;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        .session-loader .loader-box p {
+            margin-top: 18px;
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        body.light-mode .session-loader {
+            background: rgba(242, 244, 248, 0.7);
+        }
+        body.light-mode .session-loader .loader-box {
+            background: rgba(255, 255, 255, 0.85);
+            border-color: rgba(0, 0, 0, 0.06);
+        }
+        body.light-mode .session-loader .loader-box p {
+            color: rgba(0, 0, 0, 0.4);
+        }
+        body.light-mode .session-loader .loader-box .spinner-lg {
+            border-color: rgba(0, 0, 0, 0.08);
+            border-top-color: #0066cc;
+        }
+
+        /* ========== STORAGE MODE BADGE ========== */
+        .storage-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            padding: 3px 12px;
+            border-radius: 20px;
+            margin-top: 2px;
+            background: rgba(251, 191, 36, 0.12);
+            color: #fcd34d;
+            border: 1px solid rgba(251, 191, 36, 0.15);
+        }
+        body.light-mode .storage-badge {
+            background: rgba(202, 138, 4, 0.08);
+            color: #a16207;
+            border-color: rgba(202, 138, 4, 0.12);
+        }
+        .storage-badge.cloud {
+            background: rgba(52, 211, 153, 0.12);
+            color: #6ee7b7;
+            border-color: rgba(52, 211, 153, 0.15);
+        }
+        body.light-mode .storage-badge.cloud {
+            background: rgba(22, 163, 74, 0.08);
+            color: #15803d;
+            border-color: rgba(22, 163, 74, 0.12);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ========== SESSION LOADER ========== -->
+    <div class="session-loader" id="sessionLoader">
+        <div class="loader-box">
+            <div class="spinner-lg"></div>
+            <p>🔄 Restoring your session...</p>
+        </div>
+    </div>
+
+    <!-- ========== BG ========== -->
+    <div class="bg-canvas"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- ========== REGISTER PAGE ========== -->
+    <div class="auth-page" id="registerPage">
+        <div class="auth-card">
+            <div class="badge">✦ ECSZ</div>
+            <h2>Create Account</h2>
+            <p class="sub">Register to access the security zone</p>
+
+            <div class="error-msg" id="registerError"></div>
+            <div class="success-msg" id="registerSuccess"></div>
+
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="regUsername" placeholder="Choose a username" autocomplete="off" />
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="regPassword" placeholder="Create a password" />
+            </div>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" id="regConfirm" placeholder="Confirm your password" />
+            </div>
+
+            <button class="btn-primary" id="registerBtn">Register</button>
+
+            <div class="text-center mt-8">
+                <span class="link" id="gotoLoginLink">Already have an account? Login</span>
+            </div>
+
+            <div class="divider"><span>or</span></div>
+            <div class="text-center">
+                <span class="link" id="gotoAdminLoginLink" style="font-size:13px;opacity:0.6;">🔐 Admin Login</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== LOGIN PAGE ========== -->
+    <div class="auth-page hidden" id="loginPage">
+        <div class="auth-card">
+            <div class="badge">✦ ECSZ</div>
+            <h2>Welcome Back</h2>
+            <p class="sub">Login to your account</p>
+
+            <div class="error-msg" id="loginError"></div>
+            <div class="success-msg" id="loginSuccess"></div>
+
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="loginUsername" placeholder="Enter your username" autocomplete="off" />
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter your password" />
+            </div>
+
+            <button class="btn-primary" id="loginBtn">Login</button>
+
+            <div class="text-center mt-8">
+                <span class="link" id="gotoRegisterLink">Don't have an account? Register</span>
+            </div>
+
+            <div class="divider"><span>or</span></div>
+            <div class="text-center">
+                <span class="link" id="gotoAdminLoginLink2" style="font-size:13px;opacity:0.6;">🔐 Admin Login</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== ADMIN LOGIN PAGE ========== -->
+    <div class="auth-page hidden" id="adminLoginPage">
+        <div class="auth-card">
+            <div class="admin-badge">ADMIN</div>
+            <div class="badge">✦ ECSZ</div>
+            <h2>Admin Access</h2>
+            <p class="sub">Enter administrator credentials</p>
+
+            <div class="error-msg" id="adminLoginError"></div>
+
+            <div class="form-group">
+                <label>Admin Username</label>
+                <input type="text" id="adminLoginUser" placeholder="Enter admin username" autocomplete="off" />
+            </div>
+            <div class="form-group">
+                <label>Admin Password</label>
+                <input type="password" id="adminLoginPass" placeholder="Enter admin password" />
+            </div>
+
+            <button class="btn-primary" id="adminLoginBtn">Enter Admin Panel</button>
+
+            <div class="text-center mt-8">
+                <span class="link" id="gotoBackFromAdmin">← Back to login</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MAIN PAGE (reports) ========== -->
+    <div id="mainPage">
+        <header class="header-wrap">
+            <h1>💎 ECSZ ALL REPORT 💎</h1>
+            <div class="sub">Expert Cyber Security Zone · Premium Reports</div>
+            <div class="glow-line"></div>
+            <div class="header-actions">
+                <span style="font-size:13px;color:rgba(255,255,255,0.4);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    👤 <span id="currentUserDisplay">user</span>
+                    <span id="storageModeBadge" class="storage-badge">📱 Local</span>
+                </span>
+                <button class="btn-sm" id="logoutBtn">🚪 Logout</button>
+            </div>
+        </header>
+
+        <div class="container">
+            <a class="btn" href="https://m.facebook.com/help/contact/295309487309948" target="_blank"><span class="icon">☠️</span> FACEBOOK IMPOSTER REPORT</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/copyrightform" target="_blank"><span class="icon">☠️</span> FACEBOOK COPYRIGHT</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/516343134409068" target="_blank"><span class="icon">☠️</span> FACEBOOK PRIVACY VIOLENCE</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/209046679279097" target="_blank"><span class="icon">☠️</span> FACEBOOK UNDER AGE REPORT</a>
+            <a class="btn" href="https://www.facebook.com/help/contact/319149701968527" target="_blank"><span class="icon">☠️</span> FACEBOOK LEGAL REMOVAL</a>
+            <a class="btn" href="https://help.instagram.com/contact/552695131608132" target="_blank"><span class="icon">☠️</span> INSTAGRAM COPYRIGHT</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/274459462613911" target="_blank"><span class="icon">☠️</span> FACEBOOK REPORT SOMETHING</a>
+            <a class="btn" href="https://www.tiktok.com/legal/report/feedback" target="_blank"><span class="icon">☠️</span> TIKTOK ID BAN REPORT</a>
+            <a class="btn" href="https://help.meta.com/requests/1371776380779082/" target="_blank"><span class="icon">☠️</span> FACEBOOK INDIAN GRIEVANCE</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/725651070269668" target="_blank"><span class="icon">☠️</span> 18+ FB PAGE/POST REMOVE</a>
+            <a class="btn" href="https://www.facebook.com/help/contact/435015304579692" target="_blank"><span class="icon">☠️</span> TURKEY LEGAL REMOVAL</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/1866954787329282" target="_blank"><span class="icon">☠️</span> FB PAGE REPORT</a>
+            <a class="btn" href="https://help.snapchat.com/hc/en-us/requests/new?co=true&tf_23701027754644=cf_report_violation_other_under_13&ticket_form_id=17471023300884" target="_blank"><span class="icon">☠️</span> SNAPCHAT ACCOUNT REPORT</a>
+            <a class="btn" href="https://www.facebook.com/reel/4191113434537042" target="_blank"><span class="icon">☠️</span> MARCO CIVIL BRAZILIAN</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/268228883256323" target="_blank"><span class="icon">☠️</span> FACEBOOK FEEDBACK</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/507287962650443" target="_blank"><span class="icon">☠️</span> GIVE US FEEDBACK</a>
+            <a class="btn" href="https://help.instagram.com/contact/474053802368648" target="_blank"><span class="icon">☠️</span> INSTAGRAM ACCOUNT REMOVE</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/430253071144967" target="_blank"><span class="icon">☠️</span> FACEBOOK DEFAMATION</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/1653629651334864" target="_blank"><span class="icon">☠️</span> FB FAKE COPYRIGHT RESTORE</a>
+            <a class="btn" href="https://www.whatsapp.com/contact/?subject=messenger" target="_blank"><span class="icon">☠️</span> WHATSAPP BAN/UNBAN</a>
+            <a class="btn" href="https://www.bkash.com/en/help/locator/customer-care-points" target="_blank"><span class="icon">☠️</span> BKASH LIVE CHAT</a>
+            <a class="btn" href="https://nagad.com.bd/contact/" target="_blank"><span class="icon">☠️</span> NAGAD LIVE CHAT</a>
+            <a class="btn" href="http://facebook.com/hacked" target="_blank"><span class="icon">☠️</span> FACEBOOK HACKED</a>
+            <a class="btn" href="https://www.facebook.com/help/283100488694834" target="_blank"><span class="icon">☠️</span> 2FA OR PASSWORD RESETS</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/288611514529252" target="_blank"><span class="icon">☠️</span> IP UNBLOCK</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/191122007680088" target="_blank"><span class="icon">☠️</span> ACCOUNT REMOVAL REQUEST</a>
+            <a class="btn" href="https://m.facebook.com/help/contact/1417759018475333" target="_blank"><span class="icon">☠️</span> FACEBOOK NAME CHANGE</a>
+            <a class="btn" href="https://telegram.org/support" target="_blank"><span class="icon">☠️</span> TELEGRAM REPORT</a>
+            <a class="btn" href="https://www.facebook.com/help/contact/957215276032920" target="_blank"><span class="icon">☠️</span> HACKED BACK PAGE</a>
+            <a class="btn" href="https://help.meta.com/requests/690620243540954/" target="_blank"><span class="icon">☠️</span> INSTAGRAM POST REMOVE</a>
+        </div>
+    </div>
+
+    <!-- ========== ADMIN PANEL ========== -->
+    <div id="adminPanel">
+        <div class="admin-card">
+            <div class="admin-header">
+                <div class="title-group">
+                    <span class="shield">🛡️</span>
+                    <h2>Admin Control</h2>
+                </div>
+                <button class="close-admin" id="closeAdminPanel" aria-label="Close">✕</button>
+            </div>
+
+            <div class="admin-stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalUsersStat">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number green" id="approvedUsersStat">0</div>
+                    <div class="stat-label">Approved</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number amber" id="pendingUsersStat">0</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="autoApproveStat" style="font-size:24px;background:linear-gradient(135deg,#fcd34d,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">⚡</div>
+                    <div class="stat-label">Auto-Approve</div>
+                </div>
+            </div>
+
+            <div class="admin-controls">
+                <div class="control-label">
+                    <span class="icon">🤖</span>
+                    <span>Auto-approve new users</span>
+                </div>
+                <div class="toggle-wrap">
+                    <span class="status-text" id="autoApproveStatus">OFF</span>
+                    <input type="checkbox" class="toggle-input" id="autoApproveToggle" />
+                    <label class="toggle-track" for="autoApproveToggle">
+                        <span class="toggle-knob"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="user-table-wrap">
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Registered</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <tr><td colspan="4" class="empty-state">⏳ Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="admin-footer">
+                <div class="admin-cred">
+                    🔐 <strong>ecszceorasel</strong> · admin session
+                </div>
+                <button class="btn-sm admin-logout-btn" id="adminLogoutBtn">🚪 Logout from Admin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SETTINGS ========== -->
+    <button class="settings-float-btn" id="settingsToggle" aria-label="Settings">
+        <span style="transition: transform 0.6s ease; display: inline-block;">⚙️</span>
+    </button>
+
+    <div class="settings-panel" id="settingsPanel">
+        <div class="panel-logo">
+            <div class="logo-main">★ ECSZ ★</div>
+            <div class="logo-sub">HELP · ECSZ · CEO · CYBEREXPERT</div>
+            <div class="logo-tag">💢ECSZ CEO RASEL💢</div>
+        </div>
+
+        <div class="panel-header">
+            <h3>⚡ Settings</h3>
+            <button class="close-settings" id="closeSettings">✕</button>
+        </div>
+
+        <div class="toggle-row">
+            <span class="label"><span class="icon">🌙</span> Dark Mode</span>
+            <div class="settings-toggle-wrap">
+                <input type="checkbox" class="toggle-input-sm" id="darkModeToggle" checked />
+                <label class="toggle-track-sm" for="darkModeToggle">
+                    <span class="toggle-knob-sm"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="social-section">
+            <span class="section-label">🔗 Connect with us</span>
+            <div class="social-grid">
+                <a class="social-link-card" href="https://t.me/cybersohag121" target="_blank">
+                    <span class="s-icon">📱</span>
+                    <span class="s-name">Telegram</span>
+                </a>
+                <a class="social-link-card" href="https://www.facebook.com/expertcybersecurity" target="_blank">
+                    <span class="s-icon">📘</span>
+                    <span class="s-name">Facebook Page</span>
+                </a>
+                <a class="social-link-card" href="https://wa.me/qr/33KIMOXLS2DLN1" target="_blank">
+                    <span class="s-icon">💬</span>
+                    <span class="s-name">WhatsApp</span>
+                </a>
+                <a class="social-link-card" href="https://www.facebook.com/ECSZCEORASEL" target="_blank">
+                    <span class="s-icon">👨‍💻</span>
+                    <span class="s-name">Developer ID</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="notice-box">
+            <span class="notice-title">📢 নোটিশ</span>
+            <strong>আসসালামু আলাইকুম</strong><br />
+            EXPERT CYBER SECURITY ZONE এর পক্ষ থেকে সবাই কে জানাই বুক ভরা ভালোবাসা ও অসীম সম্মান।<br /><br />
+            আমাদের এই রিপোর্ট গুলো কখনো খারাপ কাজে ব্যবহার করবেন না। সব সময় নিজের এবং সমাজের ভালোর জন্য কিছু করুন।
+        </div>
+    </div>
+
+    <!-- ========== AUDIO ========== -->
+    <audio id="click">
+        <source src="https://www.soundjay.com/buttons/sounds/button-09.mp3" />
+    </audio>
+
+    <!-- ========== JAVASCRIPT ========== -->
+    <script>
+        (function() {
+            'use strict';
+
+            // ─── FIREBASE CONFIG ──────────────────────────────────────────
+            // 🔥 IMPORTANT: Replace this with your own Firebase project config.
+            // Go to Firebase Console → Project Settings → Your apps → Config.
+            const firebaseConfig = {
+                apiKey: "YOUR_API_KEY",
+                authDomain: "YOUR_PROJECT.firebaseapp.com",
+                projectId: "YOUR_PROJECT_ID",
+                storageBucket: "YOUR_PROJECT.appspot.com",
+                messagingSenderId: "YOUR_SENDER_ID",
+                appId: "YOUR_APP_ID"
+            };
+
+            // ─── STATE ────────────────────────────────────────────────────
+            let db = null;
+            let useFirebase = false;
+            let storageMode = 'local';
+            let usersListener = null;
+            let localUsers = [];
+
+            // ─── DOM refs ─────────────────────────────────────────────────
+            const $ = id => document.getElementById(id);
+
+            const registerPage = $('registerPage');
+            const loginPage = $('loginPage');
+            const adminLoginPage = $('adminLoginPage');
+            const mainPage = $('mainPage');
+            const adminPanel = $('adminPanel');
+            const sessionLoader = $('sessionLoader');
+            const storageBadge = $('storageModeBadge');
+
+            const regUsername = $('regUsername');
+            const regPassword = $('regPassword');
+            const regConfirm = $('regConfirm');
+            const registerBtn = $('registerBtn');
+            const registerError = $('registerError');
+            const registerSuccess = $('registerSuccess');
+
+            const loginUsername = $('loginUsername');
+            const loginPassword = $('loginPassword');
+            const loginBtn = $('loginBtn');
+            const loginError = $('loginError');
+            const loginSuccess = $('loginSuccess');
+
+            const adminLoginUser = $('adminLoginUser');
+            const adminLoginPass = $('adminLoginPass');
+            const adminLoginBtn = $('adminLoginBtn');
+            const adminLoginError = $('adminLoginError');
+
+            const currentUserDisplay = $('currentUserDisplay');
+            const logoutBtn = $('logoutBtn');
+
+            const closeAdminPanel = $('closeAdminPanel');
+            const adminLogoutBtn = $('adminLogoutBtn');
+
+            const userTableBody = $('userTableBody');
+            const totalUsersStat = $('totalUsersStat');
+            const approvedUsersStat = $('approvedUsersStat');
+            const pendingUsersStat = $('pendingUsersStat');
+            const autoApproveToggle = $('autoApproveToggle');
+            const autoApproveStatus = $('autoApproveStatus');
+            const autoApproveStat = $('autoApproveStat');
+
+            const settingsToggle = $('settingsToggle');
+            const settingsPanel = $('settingsPanel');
+            const closeSettings = $('closeSettings');
+            const darkModeToggle = $('darkModeToggle');
+
+            const gotoLoginLink = $('gotoLoginLink');
+            const gotoRegisterLink = $('gotoRegisterLink');
+            const gotoAdminLoginLink = $('gotoAdminLoginLink');
+            const gotoAdminLoginLink2 = $('gotoAdminLoginLink2');
+            const gotoBackFromAdmin = $('gotoBackFromAdmin');
+
+            const sound = document.getElementById('click');
+
+            // ─── CONSTANTS ──────────────────────────────────────────────
+            const ADMIN_USER = 'ecszceorasel';
+            const ADMIN_PASS = 'ecszceorasel';
+            const SESSION_KEY = 'ecsz_session';
+            const THEME_KEY = 'ecsz_theme';
+            const ADMIN_STATE_KEY = 'ecsz_admin_open';
+            const LOCAL_STORAGE_KEY = 'ecsz_local_users';
+            const LOCAL_SETTINGS_KEY = 'ecsz_local_settings';
+
+            // ─── HELPERS ────────────────────────────────────────────────
+            function getSession() {
+                try {
+                    return JSON.parse(localStorage.getItem(SESSION_KEY)) || null;
+                } catch { return null; }
+            }
+
+            function saveSession(session) {
+                localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+            }
+
+            function clearSession() {
+                localStorage.removeItem(SESSION_KEY);
+                localStorage.removeItem(ADMIN_STATE_KEY);
+            }
+
+            function getAdminState() {
+                return localStorage.getItem(ADMIN_STATE_KEY) === 'true';
+            }
+
+            function setAdminState(open) {
+                localStorage.setItem(ADMIN_STATE_KEY, open ? 'true' : 'false');
+            }
+
+            function formatDate(ts) {
+                if (!ts) return '—';
+                const d = new Date(ts);
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            }
+
+            function showError(el, msg) {
+                el.textContent = msg;
+                el.classList.add('show');
+            }
+
+            function hideError(el) {
+                el.classList.remove('show');
+                el.textContent = '';
+            }
+
+            function showSuccess(el, msg) {
+                el.textContent = msg;
+                el.classList.add('show');
+            }
+
+            function hideSuccess(el) {
+                el.classList.remove('show');
+                el.textContent = '';
+            }
+
+            function setLoading(btn, loading) {
+                if (loading) {
+                    btn.disabled = true;
+                    const original = btn.textContent.trim();
+                    btn.dataset.original = original;
+                    btn.innerHTML = '<span class="spinner"></span> Please wait...';
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = btn.dataset.original || btn.textContent || 'Submit';
+                }
+            }
+
+            // ─── LOCAL STORAGE HELPERS ──────────────────────────────────
+            function getLocalUsers() {
+                try {
+                    return JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
+                } catch { return []; }
+            }
+
+            function saveLocalUsers(users) {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(users));
+                localUsers = users;
+            }
+
+            function getLocalSettings() {
+                try {
+                    return JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY)) || { autoApprove: false };
+                } catch { return { autoApprove: false }; }
+            }
+
+            function saveLocalSettings(settings) {
+                localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
+            }
+
+            function findUser(users, username) {
+                return users.find(u => u.username.toLowerCase() === username.toLowerCase());
+            }
+
+            // ─── THEME ──────────────────────────────────────────────────
+            function applyTheme(dark) {
+                if (dark) {
+                    document.body.classList.remove('light-mode');
+                    darkModeToggle.checked = true;
+                } else {
+                    document.body.classList.add('light-mode');
+                    darkModeToggle.checked = false;
+                }
+                try {
+                    localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
+                } catch (_) {}
+            }
+
+            function loadTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved === 'light') applyTheme(false);
+                    else applyTheme(true);
+                } catch (_) { applyTheme(true); }
+            }
+
+            // ─── NAVIGATION ─────────────────────────────────────────────
+            function showRegister() {
+                registerPage.classList.remove('hidden');
+                loginPage.classList.add('hidden');
+                adminLoginPage.classList.add('hidden');
+                mainPage.classList.remove('active');
+                adminPanel.classList.remove('active');
+                hideError(registerError);
+                hideSuccess(registerSuccess);
+                hideError(loginError);
+                hideSuccess(loginSuccess);
+                hideError(adminLoginError);
+                regUsername.value = '';
+                regPassword.value = '';
+                regConfirm.value = '';
+                registerBtn.dataset.original = 'Register';
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Register';
+                sessionLoader.classList.add('hidden');
+                updateStorageBadge();
+            }
+
+            function showLogin() {
+                registerPage.classList.add('hidden');
+                loginPage.classList.remove('hidden');
+                adminLoginPage.classList.add('hidden');
+                mainPage.classList.remove('active');
+                adminPanel.classList.remove('active');
+                hideError(loginError);
+                hideSuccess(loginSuccess);
+                hideError(registerError);
+                hideSuccess(registerSuccess);
+                hideError(adminLoginError);
+                loginUsername.value = '';
+                loginPassword.value = '';
+                loginBtn.dataset.original = 'Login';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+                sessionLoader.classList.add('hidden');
+                updateStorageBadge();
+            }
+
+            function showAdminLogin() {
+                registerPage.classList.add('hidden');
+                loginPage.classList.add('hidden');
+                adminLoginPage.classList.remove('hidden');
+                mainPage.classList.remove('active');
+                adminPanel.classList.remove('active');
+                hideError(adminLoginError);
+                hideError(loginError);
+                hideSuccess(loginSuccess);
+                adminLoginUser.value = '';
+                adminLoginPass.value = '';
+                adminLoginBtn.dataset.original = 'Enter Admin Panel';
+                adminLoginBtn.disabled = false;
+                adminLoginBtn.textContent = 'Enter Admin Panel';
+                sessionLoader.classList.add('hidden');
+                updateStorageBadge();
+            }
+
+            function showMain(keepAdmin = false) {
+                registerPage.classList.add('hidden');
+                loginPage.classList.add('hidden');
+                adminLoginPage.classList.add('hidden');
+                mainPage.classList.add('active');
+                if (!keepAdmin) {
+                    adminPanel.classList.remove('active');
+                    setAdminState(false);
+                }
+                const session = getSession();
+                if (session) {
+                    currentUserDisplay.textContent = session.username;
+                }
+                sessionLoader.classList.add('hidden');
+                updateStorageBadge();
+            }
+
+            function showAdminPanel() {
+                adminPanel.classList.add('active');
+                setAdminState(true);
+                if (!useFirebase) {
+                    renderAdminTable(localUsers);
+                } else if (db) {
+                    if (!usersListener) {
+                        listenUsers(renderAdminTable);
+                    }
+                }
+                getSettings().then(settings => {
+                    const isAuto = settings.autoApprove || false;
+                    autoApproveToggle.checked = isAuto;
+                    autoApproveStatus.textContent = isAuto ? 'ON' : 'OFF';
+                    autoApproveStatus.className = 'status-text ' + (isAuto ? 'on' : 'off');
+                    autoApproveStat.textContent = isAuto ? '✅ ON' : '⛔ OFF';
+                    autoApproveStat.style.fontSize = '18px';
+                });
+                sessionLoader.classList.add('hidden');
+                updateStorageBadge();
+            }
+
+            function hideAdminPanel() {
+                adminPanel.classList.remove('active');
+                setAdminState(false);
+            }
+
+            function updateStorageBadge() {
+                if (storageMode === 'cloud') {
+                    storageBadge.textContent = '☁️ Cloud Sync';
+                    storageBadge.className = 'storage-badge cloud';
+                } else {
+                    storageBadge.textContent = '📱 Local Storage';
+                    storageBadge.className = 'storage-badge';
+                }
+            }
+
+            // ─── FIREBASE INIT ──────────────────────────────────────────
+            function initFirebase() {
+                const isPlaceholder = firebaseConfig.apiKey.includes('YOUR_API') ||
+                    firebaseConfig.projectId.includes('YOUR_PROJECT');
+                if (isPlaceholder) {
+                    console.warn('Firebase config is placeholder. Using localStorage fallback.');
+                    useFirebase = false;
+                    storageMode = 'local';
+                    return false;
+                }
+
+                try {
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+                        console.warn('Firestore persistence:', err.message);
+                    });
+                    useFirebase = true;
+                    storageMode = 'cloud';
+                    console.log('Firebase initialized successfully.');
+                    return true;
+                } catch (e) {
+                    console.error('Firebase init error:', e);
+                    useFirebase = false;
+                    storageMode = 'local';
+                    return false;
+                }
+            }
+
+            // ─── FIREBASE: USER LISTENER ──────────────────────────────
+            function listenUsers(callback) {
+                if (!db) return;
+                if (usersListener) {
+                    usersListener();
+                    usersListener = null;
+                }
+                usersListener = db.collection('users').orderBy('registeredAt', 'desc').onSnapshot(
+                    (snapshot) => {
+                        const users = [];
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            users.push({
+                                id: doc.id,
+                                username: data.username,
+                                password: data.password,
+                                approved: data.approved === true,
+                                registeredAt: data.registeredAt || Date.now()
+                            });
+                        });
+                        localUsers = users;
+                        callback(users);
+                    },
+                    (error) => {
+                        console.error('Listen users error:', error);
+                        const local = getLocalUsers();
+                        localUsers = local;
+                        callback(local);
+                    }
+                );
+            }
+
+            // ─── GET SETTINGS (unified) ────────────────────────────────
+            async function getSettings() {
+                if (useFirebase && db) {
+                    try {
+                        const doc = await db.collection('settings').doc('global').get();
+                        if (doc.exists) {
+                            return { autoApprove: doc.data().autoApprove === true };
+                        }
+                    } catch (e) {
+                        console.warn('Firebase settings error, using local:', e);
+                    }
+                }
+                return getLocalSettings();
+            }
+
+            async function saveSettings(settings) {
+                if (useFirebase && db) {
+                    try {
+                        await db.collection('settings').doc('global').set({
+                            autoApprove: settings.autoApprove === true,
+                            updatedAt: Date.now()
+                        }, { merge: true });
+                        return;
+                    } catch (e) {
+                        console.warn('Firebase save settings error, saving locally:', e);
+                    }
+                }
+                saveLocalSettings(settings);
+            }
+
+            // ─── REGISTER (unified) ────────────────────────────────────
+            async function handleRegister() {
+                const username = regUsername.value.trim();
+                const password = regPassword.value;
+                const confirm = regConfirm.value;
+
+                hideError(registerError);
+                hideSuccess(registerSuccess);
+
+                if (!username || username.length < 3) {
+                    showError(registerError, 'Username must be at least 3 characters.');
+                    return;
+                }
+                if (!password || password.length < 4) {
+                    showError(registerError, 'Password must be at least 4 characters.');
+                    return;
+                }
+                if (password !== confirm) {
+                    showError(registerError, 'Passwords do not match.');
+                    return;
+                }
+                if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                    showError(registerError, 'Username can only contain letters, numbers and underscore.');
+                    return;
+                }
+
+                setLoading(registerBtn, true);
+
+                try {
+                    const settings = await getSettings();
+                    const autoApprove = settings.autoApprove || false;
+
+                    let success = false;
+                    let errorMsg = '';
+
+                    // Try Firebase first
+                    if (useFirebase && db) {
+                        try {
+                            const snapshot = await db.collection('users')
+                                .where('username', '==', username)
+                                .get();
+                            if (!snapshot.empty) {
+                                errorMsg = 'Username already exists. Please choose another.';
+                            } else {
+                                const newUser = {
+                                    username: username,
+                                    password: password,
+                                    approved: autoApprove,
+                                    registeredAt: Date.now()
+                                };
+                                await db.collection('users').add(newUser);
+                                success = true;
+                            }
+                        } catch (e) {
+                            console.warn('Firebase register failed, falling back to local:', e);
+                        }
+                    }
+
+                    // If Firebase failed or not available, use localStorage
+                    if (!success) {
+                        let users = getLocalUsers();
+                        if (findUser(users, username)) {
+                            errorMsg = 'Username already exists. Please choose another.';
+                        } else {
+                            const newUser = {
+                                id: username, // Use username as unique ID for local
+                                username: username,
+                                password: password,
+                                approved: autoApprove,
+                                registeredAt: Date.now()
+                            };
+                            users.push(newUser);
+                            saveLocalUsers(users);
+                            localUsers = users;
+                            success = true;
+                            if (!useFirebase) {
+                                console.log('Account created in localStorage (single-device mode).');
+                            }
+                        }
+                    }
+
+                    if (success) {
+                        if (autoApprove) {
+                            showSuccess(registerSuccess, '✅ Account created & auto-approved! Please login.');
+                        } else {
+                            showSuccess(registerSuccess,
+                                '✅ Account created! Waiting for admin approval.');
+                        }
+                        regUsername.value = '';
+                        regPassword.value = '';
+                        regConfirm.value = '';
+                        setTimeout(() => {
+                            hideSuccess(registerSuccess);
+                            showLogin();
+                        }, 1500);
+                    } else {
+                        showError(registerError, '❌ ' + (errorMsg || 'Registration failed. Please try again.'));
+                    }
+
+                } catch (err) {
+                    console.error('Register error:', err);
+                    showError(registerError, '❌ Registration failed: ' + err.message);
+                } finally {
+                    setLoading(registerBtn, false);
+                }
+            }
+
+            // ─── LOGIN (unified) ───────────────────────────────────────
+            async function handleLogin() {
+                const username = loginUsername.value.trim();
+                const password = loginPassword.value;
+
+                hideError(loginError);
+                hideSuccess(loginSuccess);
+
+                if (!username || !password) {
+                    showError(loginError, 'Please enter username and password.');
+                    return;
+                }
+
+                setLoading(loginBtn, true);
+
+                try {
+                    let userData = null;
+                    let found = false;
+
+                    // Try Firebase first
+                    if (useFirebase && db) {
+                        try {
+                            const snapshot = await db.collection('users')
+                                .where('username', '==', username)
+                                .get();
+                            if (!snapshot.empty) {
+                                snapshot.forEach(doc => {
+                                    userData = doc.data();
+                                });
+                                found = true;
+                            }
+                        } catch (e) {
+                            console.warn('Firebase login failed, trying local:', e);
+                        }
+                    }
+
+                    // If not found in Firebase, try local
+                    if (!found) {
+                        const users = getLocalUsers();
+                        const localUser = findUser(users, username);
+                        if (localUser) {
+                            userData = localUser;
+                            found = true;
+                        }
+                    }
+
+                    if (!found || !userData) {
+                        showError(loginError, 'Invalid username or password.');
+                        setLoading(loginBtn, false);
+                        return;
+                    }
+
+                    if (userData.password !== password) {
+                        showError(loginError, 'Invalid username or password.');
+                        setLoading(loginBtn, false);
+                        return;
+                    }
+
+                    if (!userData.approved) {
+                        showError(loginError, '⏳ Your account is pending admin approval. Please wait.');
+                        setLoading(loginBtn, false);
+                        return;
+                    }
+
+                    saveSession({ username: userData.username, loggedInAt: Date.now() });
+                    showSuccess(loginSuccess, '✅ Login successful! Redirecting...');
+
+                    const adminWasOpen = getAdminState();
+
+                    setTimeout(() => {
+                        hideSuccess(loginSuccess);
+                        showMain(false);
+                        if (adminWasOpen && username === ADMIN_USER) {
+                            showAdminPanel();
+                        }
+                        setLoading(loginBtn, false);
+                    }, 600);
+
+                } catch (err) {
+                    console.error('Login error:', err);
+                    showError(loginError, '❌ Login failed: ' + err.message);
+                    setLoading(loginBtn, false);
+                }
+            }
+
+            // ─── ADMIN LOGIN ────────────────────────────────────────────
+            function handleAdminLogin() {
+                const username = adminLoginUser.value.trim();
+                const password = adminLoginPass.value;
+                hideError(adminLoginError);
+
+                if (username === ADMIN_USER && password === ADMIN_PASS) {
+                    const session = getSession();
+                    if (!session) {
+                        saveSession({ username: ADMIN_USER, loggedInAt: Date.now() });
+                    }
+                    showAdminPanel();
+                    adminLoginPage.classList.add('hidden');
+                    showMain(true);
+                } else {
+                    showError(adminLoginError, '❌ Invalid admin credentials.');
+                }
+            }
+
+            // ─── ADMIN ACTIONS (unified) ───────────────────────────────
+            async function approveUser(id) {
+                // Try Firebase first if available
+                if (useFirebase && db) {
+                    try {
+                        await db.collection('users').doc(id).update({ approved: true });
+                        // Re-fetch local users from Firebase via listener or manual refresh
+                        if (usersListener) {
+                            // Listener will auto-update
+                        } else {
+                            // Manual refresh
+                            const snapshot = await db.collection('users').orderBy('registeredAt', 'desc').get();
+                            const users = [];
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                users.push({
+                                    id: doc.id,
+                                    username: data.username,
+                                    password: data.password,
+                                    approved: data.approved === true,
+                                    registeredAt: data.registeredAt || Date.now()
+                                });
+                            });
+                            localUsers = users;
+                            saveLocalUsers(users);
+                            renderAdminTable(users);
+                        }
+                        return;
+                    } catch (e) {
+                        console.warn('Firebase approve failed, trying local:', e);
+                    }
+                }
+
+                // Local fallback: id is username for local users
+                let users = getLocalUsers();
+                let idx = users.findIndex(u => u.id === id);
+                if (idx === -1) {
+                    // Fallback: try by username
+                    idx = users.findIndex(u => u.username === id);
+                }
+                if (idx >= 0) {
+                    users[idx].approved = true;
+                    saveLocalUsers(users);
+                    localUsers = users;
+                    renderAdminTable(users);
+                } else {
+                    console.warn('User not found for approval:', id);
+                }
+            }
+
+            async function rejectUser(id) {
+                if (useFirebase && db) {
+                    try {
+                        await db.collection('users').doc(id).update({ approved: false });
+                        if (usersListener) {
+                            // Listener auto-updates
+                        } else {
+                            const snapshot = await db.collection('users').orderBy('registeredAt', 'desc').get();
+                            const users = [];
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                users.push({
+                                    id: doc.id,
+                                    username: data.username,
+                                    password: data.password,
+                                    approved: data.approved === true,
+                                    registeredAt: data.registeredAt || Date.now()
+                                });
+                            });
+                            localUsers = users;
+                            saveLocalUsers(users);
+                            renderAdminTable(users);
+                        }
+                        return;
+                    } catch (e) {
+                        console.warn('Firebase reject failed, trying local:', e);
+                    }
+                }
+                let users = getLocalUsers();
+                let idx = users.findIndex(u => u.id === id);
+                if (idx === -1) idx = users.findIndex(u => u.username === id);
+                if (idx >= 0) {
+                    users[idx].approved = false;
+                    saveLocalUsers(users);
+                    localUsers = users;
+                    renderAdminTable(users);
+                }
+            }
+
+            async function deleteUser(id) {
+                if (!confirm('Delete this user?')) return;
+                if (useFirebase && db) {
+                    try {
+                        await db.collection('users').doc(id).delete();
+                        if (usersListener) {
+                            // Listener auto-updates
+                        } else {
+                            const snapshot = await db.collection('users').orderBy('registeredAt', 'desc').get();
+                            const users = [];
+                            snapshot.forEach(doc => {
+                                const data = doc.data();
+                                users.push({
+                                    id: doc.id,
+                                    username: data.username,
+                                    password: data.password,
+                                    approved: data.approved === true,
+                                    registeredAt: data.registeredAt || Date.now()
+                                });
+                            });
+                            localUsers = users;
+                            saveLocalUsers(users);
+                            renderAdminTable(users);
+                        }
+                        return;
+                    } catch (e) {
+                        console.warn('Firebase delete failed, trying local:', e);
+                    }
+                }
+                let users = getLocalUsers();
+                let idx = users.findIndex(u => u.id === id);
+                if (idx === -1) idx = users.findIndex(u => u.username === id);
+                if (idx >= 0) {
+                    users.splice(idx, 1);
+                    saveLocalUsers(users);
+                    localUsers = users;
+                    renderAdminTable(users);
+                }
+            }
+
+            // ─── RENDER ADMIN TABLE ────────────────────────────────────
+            function renderAdminTable(users) {
+                if (!users) users = localUsers;
+
+                totalUsersStat.textContent = users.length;
+                const approved = users.filter(u => u.approved).length;
+                const pending = users.filter(u => !u.approved).length;
+                approvedUsersStat.textContent = approved;
+                pendingUsersStat.textContent = pending;
+
+                getSettings().then(settings => {
+                    const isAuto = settings.autoApprove || false;
+                    autoApproveToggle.checked = isAuto;
+                    autoApproveStatus.textContent = isAuto ? 'ON' : 'OFF';
+                    autoApproveStatus.className = 'status-text ' + (isAuto ? 'on' : 'off');
+                    autoApproveStat.textContent = isAuto ? '✅ ON' : '⛔ OFF';
+                    autoApproveStat.style.fontSize = '18px';
+                });
+
+                if (users.length === 0) {
+                    userTableBody.innerHTML =
+                        `<tr><td colspan="4" class="empty-state">✨ No users registered yet.</td></tr>`;
+                    return;
+                }
+
+                let html = '';
+                users.forEach(user => {
+                    const statusClass = user.approved ? 'approved' : 'pending';
+                    const statusLabel = user.approved ? 'Approved' : 'Pending';
+                    const avatarLetter = user.username.charAt(0).toUpperCase();
+                    const dateStr = formatDate(user.registeredAt);
+                    const userId = user.id || user.username || 'user_' + Date.now();
+                    // Ensure user has an id
+                    if (!user.id) {
+                        user.id = userId;
+                    }
+                    html += `
+                        <tr>
+                            <td>
+                                <div class="username-cell">
+                                    <span class="avatar">${avatarLetter}</span>
+                                    ${user.username}
+                                </div>
+                            </td>
+                            <td class="date-cell">${dateStr}</td>
+                            <td>
+                                <span class="status-badge ${statusClass}">
+                                    <span class="dot"></span>
+                                    ${statusLabel}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-group">
+                                    ${!user.approved ? `<button class="action-btn approve-btn" data-id="${user.id}">✓ Approve</button>` : `<button class="action-btn reject-btn" data-id="${user.id}">✕ Reject</button>`}
+                                    <button class="action-btn delete-btn" data-id="${user.id}">🗑 Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                userTableBody.innerHTML = html;
+
+                userTableBody.querySelectorAll('.approve-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        approveUser(id);
+                    });
+                });
+                userTableBody.querySelectorAll('.reject-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        rejectUser(id);
+                    });
+                });
+                userTableBody.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        deleteUser(id);
+                    });
+                });
+            }
+
+            // ─── AUTO APPROVE TOGGLE ──────────────────────────────────
+            autoApproveToggle.addEventListener('change', async function() {
+                await saveSettings({ autoApprove: this.checked });
+                if (adminPanel.classList.contains('active')) {
+                    if (useFirebase && db) {
+                        // Listener will update
+                    } else {
+                        renderAdminTable(localUsers);
+                    }
+                }
+            });
+
+            // ─── BUTTON EFFECTS ────────────────────────────────────────
+            function attachButtonEffects() {
+                document.querySelectorAll('#mainPage .btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        sound.currentTime = 0;
+                        sound.play().catch(() => {});
+
+                        this.classList.remove('btn-clicked');
+                        void this.offsetWidth;
+                        this.classList.add('btn-clicked');
+
+                        const ripple = document.createElement('span');
+                        ripple.className = 'ripple';
+                        this.appendChild(ripple);
+                        const rect = this.getBoundingClientRect();
+                        const size = Math.max(rect.width, rect.height);
+                        ripple.style.width = ripple.style.height = size + 'px';
+                        ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+                        ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+                        setTimeout(() => ripple.remove(), 700);
+
+                        setTimeout(() => {
+                            this.classList.remove('btn-clicked');
+                        }, 500);
+                    });
+                });
+            }
+
+            // ─── SETTINGS PANEL ────────────────────────────────────────
+            function openSettings() {
+                settingsPanel.classList.add('open');
+            }
+
+            function closeSettingsPanel() {
+                settingsPanel.classList.remove('open');
+            }
+
+            settingsToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (settingsPanel.classList.contains('open')) {
+                    closeSettingsPanel();
+                } else {
+                    openSettings();
+                }
+            });
+
+            closeSettings.addEventListener('click', closeSettingsPanel);
+
+            document.addEventListener('click', (e) => {
+                if (settingsPanel.classList.contains('open')) {
+                    if (!settingsPanel.contains(e.target) && e.target !== settingsToggle) {
+                        closeSettingsPanel();
+                    }
+                }
+            });
+
+            darkModeToggle.addEventListener('change', function() {
+                applyTheme(this.checked);
+            });
+
+            // ─── LOGOUT ─────────────────────────────────────────────────
+            function handleLogout() {
+                clearSession();
+                if (usersListener) {
+                    usersListener();
+                    usersListener = null;
+                }
+                showLogin();
+            }
+
+            function handleAdminLogout() {
+                hideAdminPanel();
+                setAdminState(false);
+                if (usersListener) {
+                    usersListener();
+                    usersListener = null;
+                }
+                hideAdminPanel();
+                showMain(false);
+            }
+
+            // ─── SESSION PERSISTENCE FIX ──────────────────────────────
+            function restoreSession() {
+                const session = getSession();
+                if (!session) {
+                    // No session — show register or login
+                    const localUsersData = getLocalUsers();
+                    if (localUsersData.length > 0) {
+                        showLogin();
+                    } else {
+                        showRegister();
+                    }
+                    attachButtonEffects();
+                    sessionLoader.classList.add('hidden');
+                    updateStorageBadge();
+                    return;
+                }
+
+                // Session exists — verify and restore
+                let verified = false;
+                let userData = null;
+
+                // Check in Firebase first if available
+                if (useFirebase && db) {
+                    db.collection('users')
+                        .where('username', '==', session.username)
+                        .get()
+                        .then(snapshot => {
+                            if (!snapshot.empty) {
+                                snapshot.forEach(doc => {
+                                    userData = doc.data();
+                                });
+                                if (userData && userData.approved) {
+                                    verified = true;
+                                    // Restore main page
+                                    showMain(false);
+                                    attachButtonEffects();
+                                    if (session.username === ADMIN_USER) {
+                                        listenUsers(renderAdminTable);
+                                        if (getAdminState()) {
+                                            showAdminPanel();
+                                        }
+                                    }
+                                    sessionLoader.classList.add('hidden');
+                                    updateStorageBadge();
+                                    return;
+                                }
+                            }
+                            // Not found in Firebase or not approved — check local
+                            checkLocalAndRestore(session);
+                        })
+                        .catch(() => {
+                            // Firebase error — fallback to local
+                            checkLocalAndRestore(session);
+                        });
+                } else {
+                    // No Firebase — check local only
+                    checkLocalAndRestore(session);
+                }
+
+                function checkLocalAndRestore(session) {
+                    const localUsersData = getLocalUsers();
+                    const localUser = findUser(localUsersData, session.username);
+                    if (localUser && localUser.approved) {
+                        // Local user found and approved
+                        showMain(false);
+                        attachButtonEffects();
+                        if (session.username === ADMIN_USER) {
+                            renderAdminTable(localUsersData);
+                            if (getAdminState()) {
+                                showAdminPanel();
+                            }
+                        }
+                        sessionLoader.classList.add('hidden');
+                        updateStorageBadge();
+                        return;
+                    }
+
+                    // Session invalid — clear and redirect
+                    clearSession();
+                    const localUsersData2 = getLocalUsers();
+                    if (localUsersData2.length > 0) {
+                        showLogin();
+                    } else {
+                        showRegister();
+                    }
+                    attachButtonEffects();
+                    sessionLoader.classList.add('hidden');
+                    updateStorageBadge();
+                }
+            }
+
+            // ─── INIT ──────────────────────────────────────────────────
+            function init() {
+                loadTheme();
+
+                // Try to init Firebase
+                const firebaseOk = initFirebase();
+
+                // Load local users as fallback
+                localUsers = getLocalUsers();
+
+                sessionLoader.classList.remove('hidden');
+
+                // Restore session with persistence
+                restoreSession();
+
+                // If admin panel state is true but we're not on admin panel, restore it
+                const session = getSession();
+                if (session && session.username === ADMIN_USER && getAdminState()) {
+                    // ensure admin panel is shown
+                    setTimeout(() => {
+                        if (!adminPanel.classList.contains('active')) {
+                            showAdminPanel();
+                        }
+                    }, 100);
+                }
+            }
+
+            // ─── OVERRIDE showAdminPanel ──────────────────────────────
+            const originalShowAdminPanel = showAdminPanel;
+            showAdminPanel = function() {
+                const session = getSession();
+                if (session && session.username === ADMIN_USER) {
+                    originalShowAdminPanel();
+                } else {
+                    showAdminLogin();
+                }
+            };
+
+            // ─── OVERRIDE hideAdminPanel ──────────────────────────────
+            const originalHideAdminPanel = hideAdminPanel;
+            hideAdminPanel = function() {
+                originalHideAdminPanel();
+                setAdminState(false);
+            };
+
+            // ─── EVENT BINDINGS ────────────────────────────────────────
+            registerBtn.addEventListener('click', handleRegister);
+            regUsername.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleRegister(); });
+            regPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleRegister(); });
+            regConfirm.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleRegister(); });
+
+            loginBtn.addEventListener('click', handleLogin);
+            loginUsername.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+            loginPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+
+            adminLoginBtn.addEventListener('click', handleAdminLogin);
+            adminLoginUser.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAdminLogin(); });
+            adminLoginPass.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAdminLogin(); });
+
+            logoutBtn.addEventListener('click', handleLogout);
+            adminLogoutBtn.addEventListener('click', handleAdminLogout);
+
+            closeAdminPanel.addEventListener('click', hideAdminPanel);
+
+            gotoLoginLink.addEventListener('click', showLogin);
+            gotoRegisterLink.addEventListener('click', showRegister);
+            gotoAdminLoginLink.addEventListener('click', showAdminLogin);
+            gotoAdminLoginLink2.addEventListener('click', showAdminLogin);
+            gotoBackFromAdmin.addEventListener('click', showLogin);
+
+            adminPanel.addEventListener('click', function(e) {
+                if (e.target === this) hideAdminPanel();
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (adminPanel.classList.contains('active')) hideAdminPanel();
+                    if (settingsPanel.classList.contains('open')) closeSettingsPanel();
+                }
+            });
+
+            // ─── START ──────────────────────────────────────────────────
+            init();
+
+            window.__ecsz = { db, useFirebase, storageMode, localUsers, getLocalUsers, saveLocalUsers };
+
+        })();
+    </script>
+
+</body>
+</html>
